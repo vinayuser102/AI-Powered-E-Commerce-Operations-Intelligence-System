@@ -1,0 +1,4 @@
+data/raw/
+_pycache_/
+.env
+notebooks/05_module4_ai_report.ipynb
