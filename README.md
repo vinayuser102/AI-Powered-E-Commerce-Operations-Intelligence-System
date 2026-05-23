@@ -242,22 +242,13 @@ License: CC BY-NC-SA 4.0
 - **Black Friday pattern confirmed** — November 2017 shows clear demand spike
 - **R$20.4M revenue** tracked across 25 months of operations
 
----
 
-## 📖 References
 
-- Taylor, S. J., & Letham, B. (2018). Forecasting at scale. *The American Statistician, 72*(1), 37–45.
-- Liu, F. T., Ting, K. M., & Zhou, Z. H. (2008). Isolation Forest. *IEEE ICDM*.
-- Chen, T., & Guestrin, C. (2016). XGBoost. *Proceedings of KDD 2016*.
-- Hughes, A. M. (1994). *Strategic Database Marketing*. Probus Publishing.
 
----
 
-## 👨‍💻 Author
 
 **Vinay Sharma**  
-MCA — Artificial Intelligence and Machine Learning  
-Amity University Online  
+Data analyst | Operations Analytics | AI/ML
 GitHub: [@vinayuser102](https://github.com/vinayuser102)
 
 ---
@@ -270,8 +261,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 <div align="center">
 
-**Built as MCA Final Year Major Project**  
-*AI-Powered E-Commerce Operations Intelligence System*
+
 
 ⭐ Star this repo if you found it useful
 
