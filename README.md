@@ -18,7 +18,7 @@ Built on 99,441 real orders from the Olist Brazilian E-Commerce dataset.
 
 ---
 
-## 📌 What is This?
+## 📌 Why This System?
 
 Most e-commerce businesses drown in data but starve for decisions.
 
