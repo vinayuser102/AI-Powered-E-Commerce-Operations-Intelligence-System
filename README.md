@@ -1,60 +1,60 @@
-# 🤖 AI-Powered E-Commerce Operations Intelligence System
+# 🤖 AI-Powered E-Commerce Operations Intelligence System (SmartOps AI)
 
 <div align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Service%20Layer-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-FF6F61?style=for-the-badge)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![Prophet](https://img.shields.io/badge/Prophet-Forecasting-0467DF?style=for-the-badge)
-![Scikit--learn](https://img.shields.io/badge/Scikit--learn-ML-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-LLM%20AI-00A67E?style=for-the-badge)
+![Prophet](https://img.shields.io/badge/Prophet-Forecasting-0467DF?style=for-the-badge)
+![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
 ![GitHub](https://img.shields.io/badge/Status-Complete-10B981?style=for-the-badge)
 
-**A real, working, AI-powered operations intelligence platform for e-commerce businesses.**  
+**An enterprise-grade Operations Intelligence & REST API Platform for modern e-commerce.**  
 Built on 99,441 real orders from the Olist Brazilian E-Commerce dataset.
 
-[📊 View Dashboard](#dashboard) • [🚀 Quick Start](#quick-start) • [📁 Project Structure](#project-structure) • [📈 Results](#results)
+[📊 View Dashboard](#-streamlit-dashboard) • [🚀 Quick Start](#-quick-start) • [📁 Project Structure](#-project-structure) • [📈 Key Findings](#-key-findings--results)
 
 </div>
 
 ---
 
-## 📌 Why This System?
+## 📌 1. Why This System? (The Real-World Problem)
 
-Most e-commerce businesses drown in data but starve for decisions.
+Most e-commerce businesses drown in fragmented data streams but starve for fast, actionable decisions:
 
-This system changes that. It takes raw transactional data and automatically delivers:
-- **What will customers demand next?** — 90-day demand forecast
-- **Which customers are about to leave?** — RFM segmentation + churn prediction  
-- **Which sellers are behaving unusually?** — Automated anomaly detection
-- **What should we tell management?** — AI-generated weekly ops report
+1. **Unstructured Operational Knowledge:** Shipping rules, return policies, seller compliance guides, and support logs are scattered across text files. Operations teams waste hours manually searching through documents to resolve issues.
+2. **Isolated Machine Learning Insights:** Predictive models (demand forecasting, customer churn, seller fraud) stay trapped in offline scripts without standardized APIs for downstream platforms to access them in real time.
+3. **Operational Inefficiencies:** Manual log analysis slows down anomaly response times, leading to shipping delays, unexpected stockouts, and poor customer retention.
 
-All connected through a single interactive Streamlit dashboard.
+**SmartOps AI** solves this by unifying **Predictive Analytics Models**, a **RAG Intelligence Core**, and an asynchronous **FastAPI Service Layer** into a single microservice platform.
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ 2. System Architecture
 
-```
-Raw Data (9 CSV files)
-        ↓
-   Data Pipeline
-   (EDA + Cleaning + Feature Engineering)
-        ↓
-┌───────────────────────────────────────────┐
-│           4 ML/AI Modules                 │
-│                                           │
-│  Module 1    │  Module 2    │  Module 3   │
-│  Demand      │  Customer    │  Anomaly    │
-│  Forecasting │  Analytics   │  Detection  │
-│  (Prophet)   │  (RFM+XGB)   │  (IsoForest)│
-│              │              │             │
-│         Module 4 — AI Reports             │
-│         (Groq LLM Integration)            │
-└───────────────────────────────────────────┘
-        ↓
-  Streamlit Dashboard
-  (5 Pages, Interactive, Live)
-```
+```text
+                               ┌─────────────────────────────────────────┐
+                               │           Client Applications           │
+                               │  (Streamlit Dashboard / External Web)   │
+                               └────────────────────┬────────────────────┘
+                                                    │
+                                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                             FastAPI Microservice Layer (`api/`)                                 │
+│  • Pydantic Input/Output Validation   • Asynchronous Uvicorn Server   • Interactive Swagger UI  │
+│  • ML Inference Route (`/predict/churn`)                          • RAG Endpoint (`/api/v1/query`)│
+└───────────────────────────────┬─────────────────────────────────┬───────────────────────────────┘
+                                │                                 │
+                                ▼                                 ▼
+┌───────────────────────────────────────────────┐ ┌───────────────────────────────────────────────┐
+│      Predictive Analytics ML Engine           │ │        RAG Intelligence Core                  │
+│  • Demand Forecasting (Prophet)               │ │        (`rag_qa_engine/`)                      │
+│  • Customer Churn & RFM (XGBoost)             │ │  • ChromaDB Local Vector Database             │
+│  • Seller Anomaly Detection (Isolation Forest)│ │  • Semantic Document Retrieval                │
+│  • Automated AI Reporting (Groq + Brevo SMTP) │ │  • Grounded Llama-3 LLM Generation            │
+└───────────────────────────────────────────────┘ └───────────────────────────────────────────────┘
 
 ---
 
@@ -94,6 +94,15 @@ Raw Data (9 CSV files)
 - **Email Dispatch: Automated via Brevo SMTP** — report 
   sent directly to recipient email automatically
 - Fully automated — zero manual writing or sending required
+
+### Module 5 — RAG Vector Intelligence & REST API Layer
+> *How can web applications search operational policies and get real-time ML risk scores?*
+
+- Vector Database: ChromaDB local persistent store (rag_qa_engine/chroma_storage/)
+
+- LLM Engine: Groq API (llama-3.1-8b-instant) with context-bound system prompts
+
+- Microservice Layer: FastAPI application (api/app.py) providing Pydantic-validated REST endpoints (/health, /predict/churn, /api/v1/query)
 ---
 
 ## 📊 Results
@@ -116,15 +125,17 @@ Raw Data (9 CSV files)
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Python 3.12 |
+| Language | Python 3.12 ,asyncio |
 | Data Processing | Pandas, NumPy |
 | Machine Learning | Scikit-learn, XGBoost |
 | Time Series | Facebook Prophet |
-| AI Integration | Groq API (llama-3.3-70b) |
 | Visualization | Plotly, Matplotlib, Seaborn |
 | Dashboard | Streamlit |
 | Version Control | Git + GitHub |
 | Dataset | Olist Brazilian E-Commerce (Kaggle) |
+| LLM & AI Integration | Groq API (llama-3.1-8b-instant, llama-3.3-70b-versatile) |
+| API & Backend | FastAPI, Uvicorn, Pydantic, OpenAPI / Swagger |
+| Vector DB & Search | ChromaDB (Local Persistent Embedding Storage) |
 
 ---
 
@@ -159,54 +170,6 @@ Smart Ops/
 │   ├── anomaly_detection.png
 │   ├── weekly_report.txt
 │   └── supplier_email.txt
-│
-├── .gitignore
-└── README.md
-```
-
-# ⚡ AI-Powered E-Commerce Operations Intelligence System (SmartOps AI)
-
-A unified end-to-end Operations Intelligence platform designed for modern e-commerce enterprise operations. This project combines **Predictive Analytics Machine Learning Models**, a **RAG Intelligence Core**, and an asynchronous **FastAPI Microservice Layer** to provide real-time risk predictions, operational anomaly detection, and instant document Q&A over internal seller & logistics data.
-
----
-
-## 🎯 1. The Real-World Operational Problem
-
-In e-commerce operations, data is often fragmented across multiple systems:
-
-* **Unstructured Operational Knowledge:** Shipping rules, return policies, seller compliance guides, and support logs scattered in text files. Operations teams waste valuable hours manually searching through documents to find answers.
-* **Isolated Machine Learning Insights:** Predictive models (demand forecasting, customer churn, seller fraud) often stay isolated in Jupyter Notebooks without a standard API for downstream applications or dashboards to access them in real time.
-* **Operational Inefficiencies:** Manual log analysis slows down anomaly resolution, causing shipping delays, unexpected stockouts, and poor customer retention.
-
----
-
-## 💡 2. The Solution Architecture
-
-**SmartOps AI** unifies these streams into a production-ready microservice platform:
-
-1. **Predictive Analytics Engine:** Machine learning models trained on e-commerce metrics to forecast sales demand, detect high-risk customer churn, and flag anomalous seller behavior.
-2. **RAG Intelligence Core (`rag_qa_engine/`):** Turns unstructured operational documentation into a searchable vector database using **ChromaDB** and generates grounded answers via **Llama 3 (Groq API)** without AI hallucinations.
-3. **FastAPI Backend Service (`api/`):** Exposes real-time ML inference and AI query capabilities as clean REST API endpoints validated with **Pydantic** schemas and tested via interactive **Swagger UI**.
-
----
-
-## 🛠️ 3. Tools & Tech Stack
-
-| Domain | Technologies & Libraries |
-| :--- | :--- |
-| **Language & Core** | Python 3.12, `asyncio`, Pandas, NumPy |
-| **Predictive ML** | XGBoost, Scikit-learn, Prophet, Isolation Forest |
-| **API & Backend** | FastAPI, Uvicorn, Pydantic, OpenAPI / Swagger |
-| **Vector DB & Search** | ChromaDB (Local Persistent Embedding Storage) |
-| **LLM & Inference** | Groq API (`llama-3.1-8b-instant`), Context-Injected RAG Prompting |
-| **Environment & Security** | `python-dotenv`, Structured `.gitignore` Security Management |
-
----
-
-## 🧱 4. System Architecture & Directory Structure
-
-```text
-AI-Powered-E-Commerce-Operations-Intelligence-System/
 ├── api/                               # FastAPI Web Service Layer
 │   ├── app.py                         # REST API routes & app entrypoint
 │   ├── schemas.py                     # Pydantic data validation schemas
@@ -218,21 +181,10 @@ AI-Powered-E-Commerce-Operations-Intelligence-System/
 │   ├── ingest.py                      # Text chunking & ChromaDB vector ingestion
 │   ├── knowledge_base.txt             # Domain knowledge base & policy corpus
 │   └── query_engine.py                # Semantic search & Groq LLM pipeline
-├── notebooks/                         # Exploratory Data Analysis & Model Training
-│   ├── 01_EDA.ipynb                   # Exploratory analysis
-│   ├── 02_module1_demand.ipynb        # Sales & demand forecasting (Prophet)
-│   ├── 03_module2_customer.ipynb      # Customer churn classification (XGBoost)
-│   ├── 04_module3_anomaly.ipynb       # Seller anomaly detection (Isolation Forest)
-│   ├── 05_module4_ai_report.ipynb     # Automated executive reporting
-│   └── module_5_rag_qa.ipynb          # RAG development & prototyping
-├── dashboard/                         # Streamlit Interactive Monitoring Dashboard
-├── Data/                              # Raw & processed operational datasets
-├── outputs/                           # Generated charts & analytical reports
-├── .gitignore                         # Enterprise security & environment exclusion rules
-├── README.md                          # Project documentation
-└── requirements.txt                   # Environment dependencies
-
-
+│
+├── .gitignore
+└── README.md
+```
 
 ---
 
@@ -240,17 +192,27 @@ AI-Powered-E-Commerce-Operations-Intelligence-System/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/vinayuser102/AI-Powered-E-Commerce-Operations-Intelligence-System.git
+git clone [https://github.com/vinayuser102/AI-Powered-E-Commerce-Operations-Intelligence-System.git](https://github.com/vinayuser102/AI-Powered-E-Commerce-Operations-Intelligence-System.git)
 cd AI-Powered-E-Commerce-Operations-Intelligence-System
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-### 2. Install Dependencies
-```bash
-pip install pandas numpy matplotlib seaborn plotly jupyter scikit-learn streamlit prophet xgboost groq
+### 2. Configure Environment Variables
+```Create a .env file in the root directory of the project:
+GROQ_API_KEY=your_groq_api_key_here
+BREVO_SMTP_KEY=your_brevo_smtp_key_here
+SENDER_EMAIL=your_email@gmail.com
+BREVO_LOGIN=your_brevo_login@smtp-brevo.com
+RECIPIENT_EMAIL=recipient@gmail.com
 ```
-
-### 3. Download Dataset
+### 3. Download the Dataset
 Download the [Olist Brazilian E-Commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) from Kaggle and place all 9 CSV files in `data/raw/`
+
+### 4. Populate Vector Database (ChromaDB)
+
+python rag_qa_engine/ingest.py
 
 ### 4. Run the Notebooks (in order)
 ```bash
@@ -258,7 +220,14 @@ jupyter notebook
 ```
 Run notebooks in sequence: 01 → 02 → 03 → 04 → 05
 
-### 5. Launch Dashboard
+### 5. Launch the FastAPI Backend Service
+
+uvicorn api.app:app --reload
+```
+Access the interactive Swagger UI testing docs in your browser at http://127.0.0.1:8000/docs.
+```
+
+### 5. Launch the Streamlit Interactive Dashboard
 ```bash
 cd dashboard
 python -m streamlit run app.py
@@ -300,11 +269,6 @@ The Streamlit dashboard has 5 pages:
 
 ---
 
-## 📚 Dataset
-
-**Olist Brazilian E-Commerce Public Dataset**  
-Source: [Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)  
-License: CC BY-NC-SA 4.0
 
 | File | Records |
 |------|---------|
@@ -320,6 +284,7 @@ License: CC BY-NC-SA 4.0
 
 ## 🔑 Key Findings
 
+### Analytics & Predictive Insights:
 - **97.1% delivery rate** — Olist maintains strong fulfillment performance
 - **41.3% of customers are At Risk** — major retention opportunity identified
 - **Only 8.1% are Champions** — loyalty program urgently needed
@@ -327,7 +292,7 @@ License: CC BY-NC-SA 4.0
 - **Black Friday pattern confirmed** — November 2017 shows clear demand spike
 - **R$20.4M revenue** tracked across 25 months of operations
 
-## key Findings after adding features Fast API and rag
+### API & RAG Microservice Engineering Results
 
 1. **Sub-Second Operational Query Latency:**  
    Decoupling vector retrieval using localized **ChromaDB indexing** and combining it with cloud-accelerated **Groq LLM inference (`llama-3.1-8b-instant`)** reduced document search and answer generation time to under **1 second**, replacing manual log parsing.
