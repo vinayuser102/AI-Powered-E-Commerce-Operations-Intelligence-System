@@ -141,12 +141,25 @@ Most e-commerce businesses drown in fragmented data streams but starve for fast,
 
 ## 📁 Project Structure
 
-```
+```text
 Smart Ops/
 │
+├── api/                               # FastAPI Web Service Layer
+│   ├── app.py                         # REST API routes & app entrypoint
+│   ├── schemas.py                     # Pydantic data validation schemas
+│   ├── test_client.py                 # Local endpoint execution suite
+│   ├── train_model.py                 # Model training execution utility
+│   └── xgboost_churn_model.pkl        # Serialized ML model binary
+│
+├── rag_qa_engine/                     # RAG & Vector Intelligence Core
+│   ├── chroma_storage/                # Local persistent vector store (git-ignored)
+│   ├── ingest.py                      # Text chunking & ChromaDB vector ingestion
+│   ├── knowledge_base.txt             # Domain knowledge base & policy corpus
+│   └── query_engine.py                # Semantic search & Groq LLM pipeline
+│
 ├── data/
-│   ├── raw/                    ← 9 Olist CSV files (not tracked by Git)
-│   └── processed/              ← Cleaned outputs
+│   ├── raw/                           ← 9 Olist CSV files (not tracked by Git)
+│   └── processed/                     ← Cleaned outputs
 │       ├── master_data.csv
 │       ├── demand_forecast.csv
 │       ├── rfm_segments.csv
@@ -160,7 +173,7 @@ Smart Ops/
 │   └── 05_module4_ai_report.ipynb
 │
 ├── dashboard/
-│   └── app.py                  ← Streamlit application
+│   └── app.py                         ← Streamlit application
 │
 ├── outputs/
 │   ├── monthly_orders.png
@@ -170,21 +183,9 @@ Smart Ops/
 │   ├── anomaly_detection.png
 │   ├── weekly_report.txt
 │   └── supplier_email.txt
-├── api/                               # FastAPI Web Service Layer
-│   ├── app.py                         # REST API routes & app entrypoint
-│   ├── schemas.py                     # Pydantic data validation schemas
-│   ├── test_client.py                 # Local endpoint execution suite
-│   ├── train_model.py                 # Model training execution utility
-│   └── xgboost_churn_model.pkl        # Serialized ML model binary
-├── rag_qa_engine/                     # RAG & Vector Intelligence Core
-│   ├── chroma_storage/                # Local persistent vector store (git-ignored)
-│   ├── ingest.py                      # Text chunking & ChromaDB vector ingestion
-│   ├── knowledge_base.txt             # Domain knowledge base & policy corpus
-│   └── query_engine.py                # Semantic search & Groq LLM pipeline
 │
 ├── .gitignore
 └── README.md
-```
 
 ---
 
