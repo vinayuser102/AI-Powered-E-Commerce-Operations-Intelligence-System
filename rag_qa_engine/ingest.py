@@ -1,60 +1,45 @@
-"""Ingest the SmartOps policy document into the shared ChromaDB collection."""
-
-import logging
 import os
-import re
 from pathlib import Path
-
 import chromadb
+from chromadb.utils import embedding_functions
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-KNOWLEDGE_BASE = Path(__file__).resolve().parent / "knowledge_base.txt"
-CHROMA_PATH = Path(os.getenv("CHROMA_PATH", PROJECT_ROOT / "chroma_storage"))
-COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "smartops_policies")
-CHUNK_SIZE = 900
-CHUNK_OVERLAP = 150
+class RAGIngestor:
+    def __init__(self, chroma_dir: str = None, collection_name: str = "smartops_policies"):
+        # Automatically resolve path to rag_qa_engine/chroma_storage if not specified
+        if chroma_dir is None:
+            base_dir = Path(__file__).resolve().parent
+            chroma_dir = str(base_dir / "chroma_storage")
+            
+        self.chroma_dir = chroma_dir
+        self.client = chromadb.PersistentClient(path=self.chroma_dir)
+        self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+        self.collection = self.client.get_or_create_collection(
+            name=collection_name, 
+            embedding_function=self.embedding_fn
+        )
 
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
-logger = logging.getLogger(__name__)
+    def ingest_text_file(self, file_path: str):
+        """Reads operational policy text file, chunks sections, and stores vector embeddings in ChromaDB."""
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found at path: {file_path}")
+            
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
 
+        # Split text by double line breaks (paragraphs/sections)
+        documents = [doc.strip() for doc in text.split("\n\n") if doc.strip()]
+        ids = [f"policy_{i+1}" for i in range(len(documents))]
 
-def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """Create bounded, overlapping chunks while preferring paragraph boundaries."""
-    if chunk_size <= overlap:
-        raise ValueError("chunk_size must be greater than overlap")
+        self.collection.add(
+            documents=documents,
+            ids=ids
+        )
+        print(f"✅ Ingested {len(documents)} policy blocks into ChromaDB at '{self.chroma_dir}'.")
 
-    paragraphs = [paragraph.strip() for paragraph in re.split(r"\n\s*\n", text) if paragraph.strip()]
-    chunks: list[str] = []
-    current = ""
-    for paragraph in paragraphs:
-        candidate = f"{current}\n\n{paragraph}".strip()
-        if current and len(candidate) > chunk_size:
-            chunks.append(current)
-            current = f"{current[-overlap:]}\n\n{paragraph}".strip()
-        else:
-            current = candidate
-    if current:
-        chunks.append(current)
-    return chunks
-
-
-def run_ingestion() -> int:
-    """Upsert policy chunks with provenance metadata into the API's collection."""
-    raw_text = KNOWLEDGE_BASE.read_text(encoding="utf-8")
-    chunks = chunk_text(raw_text)
-    if not chunks:
-        raise ValueError("The knowledge base contains no ingestible content")
-
-    client = chromadb.PersistentClient(path=str(CHROMA_PATH))
-    collection = client.get_or_create_collection(name=COLLECTION_NAME)
-    collection.upsert(
-        documents=chunks,
-        ids=[f"smartops_policy_{index}" for index in range(len(chunks))],
-        metadatas=[{"source": KNOWLEDGE_BASE.name, "chunk": index} for index in range(len(chunks))],
-    )
-    logger.info("Indexed %d policy chunks in %s", len(chunks), COLLECTION_NAME)
-    return len(chunks)
-
-
+# Self-execution block when running directly from terminal
 if __name__ == "__main__":
-    run_ingestion()
+    BASE_DIR = Path(__file__).resolve().parent
+    kb_path = BASE_DIR / "knowledge_base.txt"
+    
+    ingestor = RAGIngestor()
+    ingestor.ingest_text_file(str(kb_path))
