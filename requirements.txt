@@ -1,4 +1,24 @@
-streamlit
-pandas
-plotly
-python-dotenv
+# Application runtime
+chromadb==1.5.9
+fastapi==0.139.2
+groq==1.5.0
+joblib==1.5.3
+pandas==3.0.3
+plotly==6.9.0
+python-dotenv==1.2.2
+requests==2.32.5
+scikit-learn==1.9.0
+streamlit==1.59.2
+uvicorn[standard]==0.51.0
+xgboost==3.3.0
+
+# Analytics notebooks and forecasting
+jupyter
+matplotlib
+prophet
+seaborn
+
+# Development and quality checks
+httpx
+pytest
+ruff

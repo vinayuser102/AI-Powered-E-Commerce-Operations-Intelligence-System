@@ -1,25 +1,25 @@
+"""Manual smoke-test client for a running SmartOps API instance.
+
+Run this file directly after starting Uvicorn; it is intentionally not a pytest test.
+"""
+
+import os
+
 import requests
 
-# The base URL pointing directly to your live local Uvicorn engine
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = os.getenv("SMARTOPS_API_URL", "http://127.0.0.1:8000").rstrip("/")
 
-print("📡 Initiating connection to NexusRisk Core API...")
 
-# 1. Test Case A: A high-risk customer profile (Clean Data)
-customer_a_id = "CU-9982"
-customer_a_payload = {
-    "recency": 2,          # Purchased very recently
-    "frequency": 25,       # Bought many times
-    "monetary_value": 1450.50,
-    "refund_rate": 0.05    # Low refunds
-}
+def run_smoke_test() -> dict:
+    """Submit a representative customer profile and return the API response."""
+    response = requests.post(
+        f"{BASE_URL}/predict/CU-9982",
+        json={"recency": 2, "frequency": 25, "monetary_value": 1450.50, "refund_rate": 0.05},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
 
-print(f"\n🔄 Sending payload for Customer {customer_a_id}...")
-response_a = requests.post(f"{BASE_URL}/predict/{customer_a_id}", json=customer_a_payload)
 
-if response_a.status_code == 200:
-    print("✅ Success! Response Received from ML Engine:")
-    print(response_a.json())
-else:
-    print(f"❌ Failed with Status Code: {response_a.status_code}")
-    print(response_a.json())
+if __name__ == "__main__":
+    print(run_smoke_test())

@@ -1,16 +1,24 @@
 import os
-import streamlit as st
+import re
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 import pandas as pd
 import plotly.express as px
+import requests
+import streamlit as st
+from dotenv import load_dotenv
 
 # Works both locally (dashboard/ subfolder) and on Streamlit Cloud (repo root)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, "Data", "Processed")
+API_BASE_URL = os.getenv("SMARTOPS_API_URL", "http://127.0.0.1:8000").rstrip("/")
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 
 def get_secret(key):
-    try:
-        return st.secrets[key]
-    except Exception:
-        return os.getenv(key, "")
+    return st.secrets.get(key, os.getenv(key, ""))
 
 st.set_page_config(page_title="SmartOps", layout="wide")
 
@@ -22,16 +30,24 @@ page = st.sidebar.selectbox("Navigate", [
     "Demand Forecast",
     "Customer Segments",
     "Anomaly Detection",
-    "AI Reports"
+    "AI Reports",
+    "🤖 AI Assistant"
 ])
 
 # Load data
 @st.cache_data
 def load_data():
-    master    = pd.read_csv(os.path.join(BASE_DIR, "Data", "Processed", "master_data.csv"))
-    rfm       = pd.read_csv(os.path.join(BASE_DIR, "Data", "Processed", "rfm_segments.csv"))
-    forecast  = pd.read_csv(os.path.join(BASE_DIR, "Data", "Processed", "demand_forecast.csv"))
-    anomalies = pd.read_csv(os.path.join(BASE_DIR, "Data", "Processed", "seller_anomalies.csv"))
+    required_files = ["master_data.csv", "rfm_segments.csv", "demand_forecast.csv", "seller_anomalies.csv"]
+    missing_files = [name for name in required_files if not os.path.isfile(os.path.join(DATA_DIR, name))]
+    if missing_files:
+        raise FileNotFoundError(
+            f"Missing processed data files in {DATA_DIR}: {', '.join(missing_files)}. "
+            "Run the notebooks in order to generate them."
+        )
+    master    = pd.read_csv(os.path.join(DATA_DIR, "master_data.csv"))
+    rfm       = pd.read_csv(os.path.join(DATA_DIR, "rfm_segments.csv"))
+    forecast  = pd.read_csv(os.path.join(DATA_DIR, "demand_forecast.csv"))
+    anomalies = pd.read_csv(os.path.join(DATA_DIR, "seller_anomalies.csv"))
     return master, rfm, forecast, anomalies
 
 master, rfm, forecast, anomalies = load_data()
@@ -66,10 +82,10 @@ elif page == "Demand Forecast":
                   labels={'ds':'Date','yhat':'Predicted Orders'})
     fig.add_scatter(x=forecast['ds'], y=forecast['yhat_upper'],
                     mode='lines', name='Upper Bound',
-                    line=dict(dash='dash', color='lightblue'))
+                    line={'dash': 'dash', 'color': 'lightblue'})
     fig.add_scatter(x=forecast['ds'], y=forecast['yhat_lower'],
                     mode='lines', name='Lower Bound',
-                    line=dict(dash='dash', color='lightblue'))
+                    line={'dash': 'dash', 'color': 'lightblue'})
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("### Next 30 Days Forecast")
@@ -135,7 +151,7 @@ elif page == "AI Reports":
             with open(os.path.join(BASE_DIR, "outputs", "weekly_report.txt")) as f:
                 report_content = f.read()
             st.text_area("", report_content, height=400)
-        except Exception:
+        except FileNotFoundError:
             st.warning("Run Module 4 notebook first.")
             report_content = ""
 
@@ -145,7 +161,7 @@ elif page == "AI Reports":
             with open(os.path.join(BASE_DIR, "outputs", "supplier_email.txt")) as f:
                 supplier_content = f.read()
             st.text_area("", supplier_content, height=400)
-        except Exception:
+        except FileNotFoundError:
             st.warning("Run Module 4 notebook first.")
             supplier_content = ""
 
@@ -164,21 +180,18 @@ elif page == "AI Reports":
             st.warning("Please enter at least one email address.")
         else:
             try:
-                import smtplib
-                from email.mime.text import MIMEText
-                from email.mime.multipart import MIMEMultipart
-                try:
-                    from dotenv import load_dotenv
-                    load_dotenv(os.path.join(BASE_DIR, ".env"))
-                except Exception:
-                    pass
-
                 smtp_server     = "smtp-relay.brevo.com"
                 port            = 587
                 login_email     = get_secret("BREVO_LOGIN")
                 sender_email    = get_secret("SENDER_EMAIL")
                 sender_password = get_secret("BREVO_SMTP_KEY")
                 dashboard_url   = get_secret("DASHBOARD_URL")
+
+                if not all([login_email, sender_email, sender_password]):
+                    raise ValueError("Email is not configured. Set BREVO_LOGIN, SENDER_EMAIL, and BREVO_SMTP_KEY.")
+                recipients = [recipient.strip() for recipient in recipient_input.split(",") if recipient.strip()]
+                if any("@" not in recipient for recipient in recipients):
+                    raise ValueError("Enter valid comma-separated email addresses.")
 
                 old_closing = "Best regards,\n[Your Name]\nE-commerce Operations Team"
                 closing     = "Best regards,\nVinay Sharma\nE-commerce Operations Team"
@@ -203,7 +216,6 @@ elif page == "AI Reports":
                     + closing
                 )
 
-                recipients = [r.strip() for r in recipient_input.split(",")]
                 for recipient in recipients:
                     msg = MIMEMultipart()
                     msg['From']    = sender_email
@@ -218,5 +230,100 @@ elif page == "AI Reports":
 
                 st.success(f"✅ Report sent to: {recipient_input}")
 
-            except Exception as e:
+            except (OSError, ValueError, smtplib.SMTPException) as e:
                 st.error(f"Failed to send: {e}")
+# -----------------------------------------------------------------------------
+# PAGE 6: AI ASSISTANT
+# -----------------------------------------------------------------------------
+elif page == "🤖 AI Assistant":
+    st.header("🤖 SmartOps Autonomous AI Assistant")
+    st.caption("Ask questions about operations policies (RAG) or calculate customer churn risk in real-time (FastAPI + XGBoost).")
+
+    # 1. Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": "Hello! I am your SmartOps Ops Assistant. Ask me about company shipping rules, return policies, or provide customer metrics to evaluate churn risk!"
+            }
+        ]
+
+    # 2. Render previous messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # 3. Chat Input & Intent Routing
+    if prompt := st.chat_input("Ex: 'What is our refund policy?' or 'Predict churn for total_orders=12'"):
+        st.chat_message("user").markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        with st.chat_message("assistant"):
+            with st.spinner("Analyzing intent and routing request to FastAPI microservice..."):
+                try:
+                    # ROUTE A: Machine Learning Churn Risk Inference (FastAPI + XGBoost)
+                    if any(keyword in prompt.lower() for keyword in ["churn", "predict", "risk"]):
+                        # 1. Default feature values
+                        recency = 120.0
+                        frequency = 5.0
+                        monetary_value = 450.0
+                        refund_rate = 0.0
+
+                        # 2. Extract dynamic numbers from chat prompt using Regex
+                        recency_match = re.search(r'recency\s*=\s*(\d+\.?\d*)', prompt, re.IGNORECASE)
+                        freq_match = re.search(r'frequency\s*=\s*(\d+\.?\d*)', prompt, re.IGNORECASE)
+                        monetary_match = re.search(r'monetary\s*=\s*(\d+\.?\d*)', prompt, re.IGNORECASE)
+                        refund_match = re.search(r'refund_rate\s*=\s*(\d+\.?\d*)', prompt, re.IGNORECASE)
+
+                        if recency_match:
+                            recency = float(recency_match.group(1))
+                        if freq_match:
+                            frequency = float(freq_match.group(1))
+                        if monetary_match:
+                            monetary_value = float(monetary_match.group(1))
+                        if refund_match:
+                            refund_rate = float(refund_match.group(1))
+
+                        # 3. Construct dynamic payload for FastAPI
+                        payload = {
+                            "recency": recency,
+                            "frequency": frequency,
+                            "monetary_value": monetary_value,
+                            "refund_rate": refund_rate
+                        }
+
+                        response = requests.post(f"{API_BASE_URL}/predict/CUST_INTERACTIVE", json=payload, timeout=5)
+
+                        if response.status_code == 200:
+                            data = response.json()
+                            reply = (
+                                f"*📊 ML Risk Inference Result (FastAPI + XGBoost Layer)*\n\n"
+                                f"* *Customer ID:** '{data.get('customer_id', 'CUST_999')}'\n"
+                                f"* *Evaluated Risk Level:** **{data.get('risk_level', 'High')}**\n"
+                                f"* *Model Verdict:** Evaluated churn probability based on purchase recency and total spending metrics."
+                            )
+                        else:
+                            reply = "⚠️ *API Warning:* Communicated with FastAPI, but received a non-200 status code."
+
+                    # ROUTE B: Grounded Document Q&A (FastAPI + ChromaDB RAG Engine)
+                    else:
+                        payload = {"query": prompt}
+                        response = requests.post(f"{API_BASE_URL}/api/v1/query", json=payload, timeout=10)
+
+                        if response.status_code == 200:
+                            data = response.json()
+                            reply = f"*🧠 Grounded Operations Knowledge (ChromaDB Vector RAG):*\n\n{data.get('answer', data)}"
+                        else:
+                            reply = "⚠️ *API Warning:* Could not retrieve answer from the RAG endpoint."
+
+                except requests.exceptions.ConnectionError:
+                    reply = (
+                        f"❌ *Backend Connection Error:* Unable to reach FastAPI at {API_BASE_URL}.\n\n"
+                        "Make sure your FastAPI server is running in another terminal window using:\n"
+                        "bash\nuvicorn api.app:app --reload\n"
+                    )
+                except requests.exceptions.RequestException as e:
+                    reply = f"❌ *API Request Error:* {e!s}"
+
+            st.markdown(reply)
+            st.session_state.messages.append({"role": "assistant", "content": reply})

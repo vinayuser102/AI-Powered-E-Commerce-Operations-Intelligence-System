@@ -1,107 +1,138 @@
-from fastapi import FastAPI, HTTPException
-# We import the strict data validations we just built in step 6
-from schemas import CustomerFeatures, PredictionResponse
+"""FastAPI service for SmartOps churn scoring and grounded policy Q&A."""
 
-# Initializing the core web application engine
-app = FastAPI(
-    title="NexusRisk API Engine",
-    description="Production endpoint serving live customer risk scoring profiles.",
-    version="1.0.0"
-)
-
-# 1. System Health Check Router (GET Method)
-@app.get("/health")
-async def health_check():
-    """
-    Returns the operational status of the core engine infrastructure.
-    """
-    return {"status": "healthy", "service": "NexusRisk Core Engine"}
-
-# 2. ML Inference Processing Router (POST Method)
-@app.post("/predict/{customer_id}", response_model=PredictionResponse)
-async def predict_churn(customer_id: str, features: CustomerFeatures):
-    try:
-        # Placeholder computation logic to verify our data routing works perfectly
-        mock_probability = 0.81
-        risk = "HIGH" if mock_probability > 0.70 else "LOW"
-        
-        return PredictionResponse(
-            customer_id=customer_id,
-            churn_probability=mock_probability,
-            risk_level=risk
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-    
-
+import logging
 import os
-import joblib
-from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
-# Importing the strict validation schemas we built earlier
-from schemas import CustomerFeatures, PredictionResponse
+from pathlib import Path
 
-# Global dictionary memory space to safely anchor our model weights in RAM
-ml_models = {}
+import chromadb
+import joblib
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from groq import Groq
 
-# 1. The Production Lifespan Manager
+from .schemas import CustomerFeatures, PredictionResponse, RagQuery, RagResponse
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env")
+
+MODEL_PATH = Path(os.getenv("CHURN_MODEL_PATH", PROJECT_ROOT / "api" / "xgboost_churn_model.pkl"))
+CHROMA_PATH = Path(os.getenv("CHROMA_PATH", PROJECT_ROOT / "chroma_storage"))
+COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "smartops_policies")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
+logger = logging.getLogger(__name__)
+
+chroma_client = chromadb.PersistentClient(path=str(CHROMA_PATH))
+collection = chroma_client.get_or_create_collection(name=COLLECTION_NAME)
+ml_models: dict[str, object | None] = {"churn": None}
+
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    # This path matches the empty file we created on your V drive
-    model_path = "xgboost_churn_model.pkl"
-    
-    # Check if the file actually contains trained data weights
-    if os.path.exists(model_path) and os.path.getsize(model_path) > 0:
+async def lifespan(_: FastAPI):
+    """Load the optional churn model once, then release it on shutdown."""
+    if MODEL_PATH.is_file() and MODEL_PATH.stat().st_size > 0:
         try:
-            ml_models["churn"] = joblib.load(model_path)
-            print("🚀 Success: Trained XGBoost model loaded into RAM.")
-        except Exception as e:
-            print(f"⚠️ Error loading model file: {e}. Falling back to dummy framework.")
-            ml_models["churn"] = None
+            ml_models["churn"] = joblib.load(MODEL_PATH)
+            logger.info("Loaded churn model from %s", MODEL_PATH)
+        except Exception:
+            logger.exception("Could not load churn model; using deterministic fallback")
     else:
-        print("ℹ️ Info: Empty model file placeholder detected. Operating in simulation mode.")
-        ml_models["churn"] = None
-        
-    yield
-    # Everything after 'yield' runs when you hit CTRL+C to close the server
-    ml_models.clear()
-    print("🛑 Clean Up: Model memory cleared from RAM.")
+        logger.warning("No churn model at %s; using deterministic fallback", MODEL_PATH)
 
-# Passing our lifespan engine directly into the application instance
+    yield
+    ml_models.clear()
+    logger.info("Released churn model from memory")
+
+
 app = FastAPI(
-    title="NexusRisk API Engine",
-    description="Production endpoint serving live customer risk scoring profiles.",
-    version="1.0.0",
-    lifespan=lifespan
+    title="SmartOps API",
+    description="Customer churn scoring and grounded operations-policy Q&A.",
+    version="1.1.0",
+    lifespan=lifespan,
 )
+
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "NexusRisk Core Engine"}
+    """Return the service status and whether a trained model is loaded."""
+    return {
+        "status": "healthy",
+        "service": "SmartOps API",
+        "model_loaded": ml_models.get("churn") is not None,
+    }
+
 
 @app.post("/predict/{customer_id}", response_model=PredictionResponse)
 async def predict_churn(customer_id: str, features: CustomerFeatures):
+    """Score a validated customer feature vector for churn risk."""
     try:
-        # Step A: Transform the incoming validated JSON data into a 2D Array format that ML models expect
-        input_matrix = [
-            [features.recency, features.frequency, features.monetary_value, features.refund_rate]
-        ]
-        
-        # Step B: If the model is loaded in memory, compute actual inference probability
-        if ml_models["churn"] is not None:
-            # predict_proba returns an array of probabilities: [[prob_class_0, prob_class_1]]
-            # We extract the second value [0][1] which represents the probability of Churn (Class 1)
-            prob = float(ml_models["churn"].predict_proba(input_matrix)[0][1])
+        input_matrix = [[features.recency, features.frequency, features.monetary_value, features.refund_rate]]
+        model = ml_models.get("churn")
+        if model is not None:
+            probability = float(model.predict_proba(input_matrix)[0][1])
         else:
-            # Fallback placeholder calculation logic if the model file is still empty
-            prob = 0.81
-            
-        risk = "HIGH" if prob > 0.70 else "LOW"
-        
+            probability = 0.85 if features.recency > 90 or features.refund_rate > 0.15 else 0.25
+
         return PredictionResponse(
             customer_id=customer_id,
-            churn_probability=prob,
-            risk_level=risk
+            churn_probability=probability,
+            risk_level="HIGH" if probability > 0.70 else "LOW",
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Inference Engine Failure: {str(e)}")
+    except Exception as exc:
+        logger.exception("Churn inference failed for customer %s", customer_id)
+        raise HTTPException(status_code=500, detail="Inference engine failure") from exc
+
+
+@app.post("/api/v1/query", response_model=RagResponse)
+async def query_rag(payload: RagQuery):
+    """Answer only from retrieved policy chunks and return their provenance."""
+    try:
+        results = collection.query(
+            query_texts=[payload.query],
+            n_results=payload.max_results,
+            include=["documents", "metadatas", "distances"],
+        )
+        documents = results.get("documents", [[]])[0] or []
+        metadatas = results.get("metadatas", [[]])[0] or []
+
+        if not documents:
+            return RagResponse(
+                answer="Policy details are unavailable.", status="no_context", sources=[]
+            )
+
+        sources = [
+            {
+                "source": (metadata or {}).get("source", "knowledge_base.txt"),
+                "chunk": (metadata or {}).get("chunk", index),
+            }
+            for index, metadata in enumerate(metadatas)
+        ]
+        context = "\n---\n".join(documents)
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="GROQ_API_KEY is not configured")
+
+        completion = Groq(api_key=api_key).chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are the SmartOps Assistant. Answer only from the supplied policy context. "
+                        "If the context does not contain the answer, respond exactly: Policy details are unavailable."
+                    ),
+                },
+                {"role": "user", "content": f"Policy context:\n{context}\n\nQuestion: {payload.query}"},
+            ],
+            model=GROQ_MODEL,
+            temperature=0,
+            max_completion_tokens=300,
+        )
+        answer = completion.choices[0].message.content or "Policy details are unavailable."
+        return RagResponse(answer=answer, status="success", sources=sources)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("RAG query failed")
+        raise HTTPException(status_code=500, detail="RAG engine failure") from exc

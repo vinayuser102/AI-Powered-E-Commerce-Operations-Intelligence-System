@@ -157,9 +157,9 @@ Smart Ops/
 │   ├── knowledge_base.txt             # Domain knowledge base & policy corpus
 │   └── query_engine.py                # Semantic search & Groq LLM pipeline
 │
-├── data/
-│   ├── raw/                           ← 9 Olist CSV files (not tracked by Git)
-│   └── processed/                     ← Cleaned outputs
+├── Data/
+│   ├── raw/                           ← 9 Olist CSV files
+│   └── Processed/                     ← Cleaned outputs
 │       ├── master_data.csv
 │       ├── demand_forecast.csv
 │       ├── rfm_segments.csv
@@ -200,59 +200,58 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment Variables
-```Create a .env file in the root directory of the project:
-GROQ_API_KEY=your_groq_api_key_here
-BREVO_SMTP_KEY=your_brevo_smtp_key_here
-SENDER_EMAIL=your_email@gmail.com
-BREVO_LOGIN=your_brevo_login@smtp-brevo.com
-RECIPIENT_EMAIL=recipient@gmail.com
+### 2. Configure secrets
+
+Create a `.env` file in the project root. Never add API keys to notebooks, source files, or Git.
+
+```env
+GROQ_API_KEY=your_groq_api_key
+BREVO_SMTP_KEY=your_brevo_smtp_key
+SENDER_EMAIL=your_sender_email
+BREVO_LOGIN=your_brevo_login
 ```
-### 3. Download the Dataset
-Download the [Olist Brazilian E-Commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) from Kaggle and place all 9 CSV files in `data/raw/`
 
-### 4. Populate Vector Database (ChromaDB)
+For Streamlit Cloud, copy `.streamlit/secrets.toml.example` into its Secrets settings and replace the placeholders there.
 
-python rag_qa_engine/ingest.py
+### 3. Download the dataset
 
-### 4. Run the Notebooks (in order)
+Download the [Olist Brazilian E-Commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) from Kaggle and place all 9 CSV files in `Data/raw/`.
+
+### 4. Run the notebooks (in order)
 ```bash
 jupyter notebook
 ```
 Run notebooks in sequence: 01 → 02 → 03 → 04 → 05
 
-### 5. Launch the FastAPI Backend Service
+### 5. Ingest the policy knowledge base and launch the API
 
+```bash
+python rag_qa_engine/ingest.py
 uvicorn api.app:app --reload
 ```
-Access the interactive Swagger UI testing docs in your browser at http://127.0.0.1:8000/docs.
-```
 
-### 5. Launch the Streamlit Interactive Dashboard
+The API provides `GET /health`, `POST /predict/{customer_id}`, and `POST /api/v1/query`. RAG answers include source provenance and return a safe fallback when no policy context is available. Interactive documentation is available at `http://127.0.0.1:8000/docs`.
+
+### 6. Launch the Streamlit interactive dashboard
 ```bash
 cd dashboard
 python -m streamlit run app.py
 ```
 
-### 6. Add Your Groq API Key
-In `notebooks/05_module4_ai_report.ipynb`, replace:
-```python
-GROQ_API_KEY = "your_groq_api_key_here"
+### 7. Run tests and lint checks
+
+```bash
+pytest
+ruff check api rag_qa_engine dashboard tests
 ```
-Get a free key at [console.groq.com](https://console.groq.com)
 
+### 8. Run with Docker (optional)
 
+```bash
+docker compose up --build
+```
 
-### 7. Configure Email (Optional)
-Create a `.env` file in the project root:
-GROQ_API_KEY=your_groq_api_key
-BREVO_SMTP_KEY=your_brevo_smtp_key
-SENDER_EMAIL=your_email@gmail.com
-BREVO_LOGIN=your_brevo_login@smtp-brevo.com
-RECIPIENT_EMAIL=recipient@gmail.com
-
-
-Get a free Brevo account at [brevo.com](https://brevo.com)
+This starts the API on port 8000 and the dashboard on port 8501. Add `GROQ_API_KEY` to `.env` before starting it.
 
 ---
 
