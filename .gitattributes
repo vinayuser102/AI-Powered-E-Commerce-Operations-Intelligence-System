@@ -1,2 +1,19 @@
+# Mark Jupyter notebooks as documentation (excluded from language stats)
 *.ipynb linguist-detectable=false
 notebooks/*.ipynb linguist-documentation=true
+dashboard/*.ipynb linguist-documentation=true
+
+# Mark non-Python config/infra files as vendored (excluded from language stats)
+Dockerfile linguist-vendored
+docker-compose.yml linguist-vendored
+*.yml linguist-vendored
+*.yaml linguist-vendored
+*.json linguist-vendored
+*.toml linguist-vendored
+*.txt linguist-documentation
+*.md linguist-documentation
+.gitignore linguist-vendored
+.gitattributes linguist-vendored
+.dockerignore linguist-vendored
+*.csv linguist-vendored
+*.pkl linguist-vendored
