@@ -51,10 +51,11 @@ Most e-commerce businesses drown in fragmented data streams but starve for fast,
 ┌───────────────────────────────────────────────┐ ┌───────────────────────────────────────────────┐
 │      Predictive Analytics ML Engine           │ │        RAG Intelligence Core                  │
 │  • Demand Forecasting (Prophet)               │ │        (`rag_qa_engine/`)                      │
-│  • Customer Churn & RFM (XGBoost)             │ │  • ChromaDB Local Vector Database             │
+│  • Customer Churn & RFM (Gradient Boosting)   │ │  • ChromaDB Local Vector Database             │
 │  • Seller Anomaly Detection (Isolation Forest)│ │  • Semantic Document Retrieval                │
 │  • Automated AI Reporting (Groq + Brevo SMTP) │ │  • Grounded Llama-3 LLM Generation            │
 └───────────────────────────────────────────────┘ └───────────────────────────────────────────────┘
+```
 
 ---
 
@@ -80,7 +81,7 @@ Most e-commerce businesses drown in fragmented data streams but starve for fast,
 > *Which sellers are behaving unusually and why?*
 
 - Algorithm: **Isolation Forest** (unsupervised ML)
-- Input: Seller-level aggregates across 4 operational features
+- Input: Seller-level aggregates across 4 operational features (avg delay, order volume, avg price, total revenue)
 - Output: 149 anomalous sellers flagged from 2,970 total
 - No labeled data required — fully unsupervised
 
@@ -91,18 +92,16 @@ Most e-commerce businesses drown in fragmented data streams but starve for fast,
 - Output 1: Weekly executive operations summary report
 - Output 2: Supplier reorder email (triggered by forecast)
 - Fully automated — zero manual writing required
-- **Email Dispatch: Automated via Brevo SMTP** — report 
+- **Email Dispatch: Automated via Brevo SMTP** — report
   sent directly to recipient email automatically
-- Fully automated — zero manual writing or sending required
 
 ### Module 5 — RAG Vector Intelligence & REST API Layer
 > *How can web applications search operational policies and get real-time ML risk scores?*
 
-- Vector Database: ChromaDB local persistent store (rag_qa_engine/chroma_storage/)
+- Vector Database: ChromaDB local persistent store (`rag_qa_engine/chroma_storage/`)
+- LLM Engine: Groq API (`llama-3.3-70b-versatile`) with context-bound system prompts
+- Microservice Layer: FastAPI application (`api/app.py`) providing Pydantic-validated REST endpoints (`/health`, `/predict/churn`, `/api/v1/query`)
 
-- LLM Engine: Groq API (llama-3.1-8b-instant) with context-bound system prompts
-
-- Microservice Layer: FastAPI application (api/app.py) providing Pydantic-validated REST endpoints (/health, /predict/churn, /api/v1/query)
 ---
 
 ## 📊 Results
@@ -114,8 +113,8 @@ Most e-commerce businesses drown in fragmented data streams but starve for fast,
 | Delivery Rate | 97.1% |
 | Avg Delivery (vs estimated) | 12 days early |
 | Anomalous Sellers Detected | 149 / 2,970 |
-| At-Risk Customers Identified | 39,867 (41.3%) |
-| Champion Customers | 7,815 (8.1%) |
+| At-Risk Customers Identified | 39,822 (41.3%) |
+| Champion Customers | 7,781 (8.1%) |
 | Forecast Horizon | 90 days |
 | Forecast MAE | 81.48 orders/day |
 
@@ -125,17 +124,19 @@ Most e-commerce businesses drown in fragmented data streams but starve for fast,
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Python 3.12 ,asyncio |
+| Language | Python 3.12, asyncio |
 | Data Processing | Pandas, NumPy |
 | Machine Learning | Scikit-learn, XGBoost |
 | Time Series | Facebook Prophet |
 | Visualization | Plotly, Matplotlib, Seaborn |
 | Dashboard | Streamlit |
 | Version Control | Git + GitHub |
+| CI/CD | GitHub Actions (ruff + pytest) |
 | Dataset | Olist Brazilian E-Commerce (Kaggle) |
-| LLM & AI Integration | Groq API (llama-3.1-8b-instant, llama-3.3-70b-versatile) |
+| LLM & AI Integration | Groq API (`llama-3.3-70b-versatile`) |
 | API & Backend | FastAPI, Uvicorn, Pydantic, OpenAPI / Swagger |
 | Vector DB & Search | ChromaDB (Local Persistent Embedding Storage) |
+| Email Dispatch | Brevo SMTP Relay |
 
 ---
 
@@ -147,19 +148,27 @@ Smart Ops/
 ├── api/                               # FastAPI Web Service Layer
 │   ├── app.py                         # REST API routes & app entrypoint
 │   ├── schemas.py                     # Pydantic data validation schemas
-│   ├── test_client.py                 # Local endpoint execution suite
-│   ├── train_model.py                 # Model training execution utility
+│   ├── test_client.py                 # Manual smoke-test client
+│   ├── train_model.py                 # XGBoost demo model training (synthetic data)
 │   └── xgboost_churn_model.pkl        # Serialized ML model binary
 │
+├── ml_engine/                         # Core ML Pipeline Modules
+│   ├── forecast_pipeline.py           # Prophet demand forecasting engine
+│   ├── churn_pipeline.py              # Gradient Boosting churn model (real data)
+│   └── anomaly_detector.py            # Isolation Forest anomaly detection
+│
+├── core/                              # AI Reporting Engine
+│   └── ai_reporter.py                 # Groq LLM report generation + Brevo email dispatch
+│
 ├── rag_qa_engine/                     # RAG & Vector Intelligence Core
-│   ├── chroma_storage/                # Local persistent vector store (git-ignored)
+│   ├── chroma_storage/                # Local persistent vector store
 │   ├── ingest.py                      # Text chunking & ChromaDB vector ingestion
 │   ├── knowledge_base.txt             # Domain knowledge base & policy corpus
 │   └── query_engine.py                # Semantic search & Groq LLM pipeline
 │
 ├── Data/
-│   ├── raw/                           ← 9 Olist CSV files
-│   └── Processed/                     ← Cleaned outputs
+│   ├── raw/                           # 9 Olist CSV files
+│   └── Processed/                     # Cleaned outputs
 │       ├── master_data.csv
 │       ├── demand_forecast.csv
 │       ├── rfm_segments.csv
@@ -173,19 +182,32 @@ Smart Ops/
 │   └── 05_module4_ai_report.ipynb
 │
 ├── dashboard/
-│   └── app.py                         ← Streamlit application
+│   └── app.py                         # Streamlit multi-page application
 │
-├── outputs/
+├── tests/
+│   ├── test_api.py                    # FastAPI endpoint tests
+│   └── test_ingest.py                 # RAG ingestion tests
+│
+├── outputs/                           # Generated charts and reports
 │   ├── monthly_orders.png
+│   ├── monthly_revenue.png
 │   ├── top_categories.png
+│   ├── order_status.png
+│   ├── delivery_delay.png
+│   ├── review_scores.png
 │   ├── demand_forecast.png
 │   ├── customer_segments.png
 │   ├── anomaly_detection.png
 │   ├── weekly_report.txt
 │   └── supplier_email.txt
 │
+├── .github/workflows/ci.yml          # GitHub Actions CI pipeline
+├── Dockerfile                         # API service container
+├── docker-compose.yml                 # Multi-service orchestration
+├── requirements.txt                   # Python dependencies
 ├── .gitignore
 └── README.md
+```
 
 ---
 
@@ -193,7 +215,7 @@ Smart Ops/
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/vinayuser102/AI-Powered-E-Commerce-Operations-Intelligence-System.git](https://github.com/vinayuser102/AI-Powered-E-Commerce-Operations-Intelligence-System.git)
+git clone https://github.com/vinayuser102/AI-Powered-E-Commerce-Operations-Intelligence-System.git
 cd AI-Powered-E-Commerce-Operations-Intelligence-System
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
@@ -210,6 +232,9 @@ BREVO_SMTP_KEY=your_brevo_smtp_key
 SENDER_EMAIL=your_sender_email
 BREVO_LOGIN=your_brevo_login
 ```
+
+> `GROQ_API_KEY` is required for LLM-powered reporting (Module 4) and RAG Q&A (Module 5).
+> `BREVO_SMTP_KEY`, `SENDER_EMAIL`, and `BREVO_LOGIN` are required for automated email dispatch.
 
 For Streamlit Cloud, copy `.streamlit/secrets.toml.example` into its Secrets settings and replace the placeholders there.
 
@@ -242,7 +267,7 @@ python -m streamlit run app.py
 
 ```bash
 pytest
-ruff check api rag_qa_engine dashboard tests
+ruff check api core ml_engine rag_qa_engine dashboard tests
 ```
 
 ### 8. Run with Docker (optional)
@@ -251,13 +276,13 @@ ruff check api rag_qa_engine dashboard tests
 docker compose up --build
 ```
 
-This starts the API on port 8000 and the dashboard on port 8501. Add `GROQ_API_KEY` to `.env` before starting it.
+This starts the API on port 8000 and the dashboard on port 8501. Add all required keys to `.env` before starting.
 
 ---
 
 ## 🖥️ Dashboard
 
-The Streamlit dashboard has 5 pages:
+The Streamlit dashboard has 6 pages:
 
 | Page | Content |
 |------|---------|
@@ -266,9 +291,11 @@ The Streamlit dashboard has 5 pages:
 | Customer Segments | RFM pie chart + segment table + churn metric |
 | Anomaly Detection | Scatter plot with flagged sellers highlighted |
 | AI Reports | Generated weekly report + supplier email |
+| 🤖 AI Assistant | Chat interface for RAG Q&A and real-time churn risk scoring |
 
 ---
 
+## 📋 Dataset Reference
 
 | File | Records |
 |------|---------|
@@ -288,32 +315,28 @@ The Streamlit dashboard has 5 pages:
 - **97.1% delivery rate** — Olist maintains strong fulfillment performance
 - **41.3% of customers are At Risk** — major retention opportunity identified
 - **Only 8.1% are Champions** — loyalty program urgently needed
-- **149 sellers flagged as anomalous** — including one with 165-day avg delay
+- **149 sellers flagged as anomalous** — worst flagged seller has 35-day avg delivery delay
 - **Black Friday pattern confirmed** — November 2017 shows clear demand spike
 - **R$20.4M revenue** tracked across 25 months of operations
 
 ### API & RAG Microservice Engineering Results
 
-1. **Sub-Second Operational Query Latency:**  
-   Decoupling vector retrieval using localized **ChromaDB indexing** and combining it with cloud-accelerated **Groq LLM inference (`llama-3.1-8b-instant`)** reduced document search and answer generation time to under **1 second**, replacing manual log parsing.
+1. **Context-Bounded RAG Generation:**
+   By strictly bounding system prompts with retrieved context chunks from internal documentation (`knowledge_base.txt`), the RAG engine ensures that generated responses are grounded in verified company policies and guidelines. When no relevant context is found, the system returns a safe fallback instead of generating ungrounded text.
 
-2. **0% AI Hallucination Rate on Operations Data:**  
-   By strictly bounding system prompts with retrieved context chunks from internal documentation (`knowledge_base.txt`), the RAG engine guarantees that generated responses are 100% grounded in verified company policies and guidelines.
-
-3. **Production-Grade Payload Reliability:**  
+2. **Production-Grade Payload Reliability:**
    Introducing **Pydantic schema validation** at the FastAPI layer eliminated runtime data type errors and malformed payload crashes on incoming HTTP requests.
 
-4. **Decoupled & Scalable Microservice Architecture:**  
-   Separating the codebase into modular components (`api/` for web routes and `rag_qa_engine/` for vector intelligence) allows ML models, vector databases, and REST endpoints to be developed, tested, or containerized independently without breaking downstream services.
+3. **Decoupled & Scalable Microservice Architecture:**
+   Separating the codebase into modular components (`api/` for web routes, `rag_qa_engine/` for vector intelligence, `ml_engine/` for model pipelines, and `core/` for report generation) allows ML models, vector databases, and REST endpoints to be developed, tested, or containerized independently without breaking downstream services.
 
-5. **Enterprise Repository Security & Hygiene:**  
+4. **Enterprise Repository Security & Hygiene:**
    Implementing strict environment separation via `.env` files and `.gitignore` rules prevented sensitive credentials (like `GROQ_API_KEY`) and heavy binary directories (`.venv/`, `chroma_storage/`) from leaking into public source control.
 
 ---
 
-
 **Vinay Sharma**  
-Data analyst | Operations Analytics | AI/ML
+Data Analyst | Operations Analytics | AI/ML
 GitHub: [@vinayuser102](https://github.com/vinayuser102)
 
 ---
@@ -325,8 +348,6 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 <div align="center">
-
-
 
 ⭐ Star this repo if you found it useful
 
